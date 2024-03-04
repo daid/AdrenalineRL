@@ -17,6 +17,11 @@ public:
         Minor,
         Major,
     } enemy_sight = EnemySight::None;
+    enum class EnemySightLevel {
+        None,
+        Alert,
+        Hunt,
+    } enemy_sight_level = EnemySightLevel::None;
     bool player_visible = false;
     Entity* entity = nullptr;
     Entity* second_entity = nullptr; // Used for open doors.

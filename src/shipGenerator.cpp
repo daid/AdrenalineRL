@@ -9,6 +9,8 @@
 
 
 r::Vector2<ShipTile> ship_tiles;
+std::vector<AreaInfo> area_info;
+
 
 static void mazeFill(int area_nr)
 {
@@ -78,11 +80,12 @@ static bool addArea(r::ivec2 start, int area_nr)
     return true;
 }
 
-static void generateShipTileAreas()
+static void generateShipTileAreas(int area_count)
 {
-    int area_count = 5;
     ship_tiles.resize({20, 20});
     map.resize(ship_tiles.size() * 7 + r::ivec2{1, 1});
+    area_info.clear();
+    area_info.resize(area_count);
 
     ship_tiles[{0, 10}].area_nr = -2;
     ship_tiles[{0, 10}].connection_mask = 2;
@@ -102,6 +105,11 @@ static void generateShipTileAreas()
     new Door(r::ivec2{1, 10} * 7 + r::ivec2{0, 3});
     new Door(r::ivec2{1, 10} * 7 + r::ivec2{0, 4});
     ship_tiles[{1, 10}].connection_mask |= 8;
+
+    for(auto p : r::Recti({}, ship_tiles.size())) {
+        if (ship_tiles[p].area_nr >= 0)
+            area_info[ship_tiles[p].area_nr].tiles.push_back(p);
+    }
 
     //Add doors between areas
     for(int source_area=0; source_area<area_count; source_area++) {
@@ -137,7 +145,7 @@ static void generateShipTileAreas()
 
 void generateShip()
 {
-    generateShipTileAreas();
+    generateShipTileAreas(5);
 
     for(auto p : r::Recti({}, ship_tiles.size())) {
         //if (p.x == 0) printf("\n"); printf("%2d", ship_tiles[p].area_nr);
@@ -148,5 +156,12 @@ void generateShip()
             for(auto p : r::Recti({}, t.tiles.size()))
                 map[p + offset].type = t.tiles[p];
         }
+    }
+
+    for(int area_nr=0; area_nr<area_info.size(); area_nr++) {
+        auto& ai = area_info[area_nr];
+        auto p = ai.tiles[r::irandom(0, ai.tiles.size() - 1)];
+        auto target = p * 7 + r::ivec2{r::irandom(3, 4), r::irandom(3, 4)};
+        new Guard(target, area_nr);
     }
 }

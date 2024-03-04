@@ -12,7 +12,7 @@ static float angleDiff(r::vec2 vector, float angle) {
 }
 
 
-Guard::Guard(r::ivec2 position) : Entity(position)
+Guard::Guard(r::ivec2 position, int base_area_nr) : Entity(position)
 {
 }
 
