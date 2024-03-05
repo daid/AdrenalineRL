@@ -41,7 +41,7 @@ void Door::tick()
     }
 }
 
-bool Door::bump()
+bool Door::bump(Entity* bumper)
 {
     map[pos()].entity = nullptr;
     map[pos()].second_entity = this;

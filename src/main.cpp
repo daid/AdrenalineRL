@@ -32,6 +32,7 @@ public:
     void onRender(r::frontend::Renderer& renderer) override {
         for(auto& tile : map) {
             tile.enemy_sight = Tile::EnemySight::None;
+            tile.enemy_sight_level = Tile::EnemySightLevel::None;
             tile.player_visible = false;
         }
         for(auto e : Entity::all) {
@@ -43,8 +44,20 @@ public:
         for(auto p : r::Recti{{}, map.size()}) {
             r::Color bg_color = {0.05, 0.05, 0.05};
             if (map[p].player_visible) bg_color = {0.1, 0.1, 0.1};
-            if (map[p].enemy_sight == Tile::EnemySight::Minor) bg_color = {0.0, 0.2, 0.0};
-            if (map[p].enemy_sight == Tile::EnemySight::Major) bg_color = {0.0, 0.3, 0.0};
+            if (map[p].enemy_sight == Tile::EnemySight::Minor) {
+                switch(map[p].enemy_sight_level) {
+                    case Tile::EnemySightLevel::None: bg_color = {0.0, 0.2, 0.0}; break;
+                    case Tile::EnemySightLevel::Alert: bg_color = {0.2, 0.2, 0.0}; break;
+                    case Tile::EnemySightLevel::Hunt: bg_color = {0.2, 0.0, 0.0}; break;
+                }
+            }
+            if (map[p].enemy_sight == Tile::EnemySight::Major) {
+                switch(map[p].enemy_sight_level) {
+                    case Tile::EnemySightLevel::None: bg_color = {0.0, 0.3, 0.0}; break;
+                    case Tile::EnemySightLevel::Alert: bg_color = {0.3, 0.3, 0.0}; break;
+                    case Tile::EnemySightLevel::Hunt: bg_color = {0.3, 0.0, 0.0}; break;
+                }
+            }
             switch(map[p].type) {
             case Tile::Type::Void:
                 renderer.draw(p + camera_offset, ' ', {0.3, 0.3, 0.3}, bg_color);
@@ -56,6 +69,11 @@ public:
                 renderer.draw(p + camera_offset, '#', {0.3, 0.3, 0.3}, bg_color);
                 break;
             }
+        }
+        for(auto e : Entity::all) {
+            e->drawLower(renderer, camera_offset);
+        }
+        for(auto p : r::Recti{{}, map.size()}) {
             if (map[p].entity)
                 map[p].entity->draw(renderer, p + camera_offset);
             else if (map[p].second_entity)
@@ -76,7 +94,7 @@ public:
 
     void tryPlayerMove(r::ivec2 offset) {
         auto target = Player::instance->pos() + offset;
-        if (map[target].entity && map[target].entity->bump()) {
+        if (map[target].entity && map[target].entity->bump(Player::instance)) {
             tick();
             return;
         }

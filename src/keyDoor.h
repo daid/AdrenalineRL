@@ -10,7 +10,7 @@ public:
     bool blocksVision() { return true; }
 
     void tick() override;
-    bool bump() override;
+    bool bump(Entity*) override;
 
     int open_counter = 0;
 

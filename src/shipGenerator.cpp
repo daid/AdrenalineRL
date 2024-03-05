@@ -158,10 +158,11 @@ void generateShip()
         }
     }
 
-    for(int area_nr=0; area_nr<area_info.size(); area_nr++) {
+    for(size_t area_nr=0; area_nr<area_info.size(); area_nr++) {
         auto& ai = area_info[area_nr];
         auto p = ai.tiles[r::irandom(0, ai.tiles.size() - 1)];
         auto target = p * 7 + r::ivec2{r::irandom(3, 4), r::irandom(3, 4)};
-        new Guard(target, area_nr);
+        if (!map[target].entity)
+            new Guard(target, area_nr);
     }
 }

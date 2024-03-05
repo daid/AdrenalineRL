@@ -28,6 +28,7 @@ public:
     std::vector<Item*> items;
 
     bool isSolid();
+    bool isWalkable();
     bool blocksVision();
 };
 

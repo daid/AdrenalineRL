@@ -11,6 +11,13 @@ bool Tile::isSolid()
     return entity != nullptr;
 }
 
+bool Tile::isWalkable()
+{
+    if (type == Type::Wall) return false;
+    if (type == Type::Void) return false;
+    return true;
+}
+
 bool Tile::blocksVision()
 {
     if (type == Type::Wall) return true;
