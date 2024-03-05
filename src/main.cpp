@@ -63,10 +63,10 @@ public:
                 renderer.draw(p + camera_offset, ' ', {0.3, 0.3, 0.3}, bg_color);
                 break;
             case Tile::Type::Floor:
-                renderer.draw(p + camera_offset, '.', {1.0, 0.3, 0.3}, bg_color);
+                renderer.draw(p + camera_offset, '.', {0.4, 0.3, 0.3}, bg_color);
                 break;
             case Tile::Type::Wall:
-                renderer.draw(p + camera_offset, '#', {0.3, 0.3, 0.3}, bg_color);
+                renderer.draw(p + camera_offset, '#', {0.3, 0.3, 0.4}, bg_color);
                 break;
             }
         }

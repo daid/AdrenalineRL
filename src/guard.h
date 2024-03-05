@@ -19,6 +19,7 @@ public:
     void tick() override;
     void normalAction();
     void alertedAction();
+    void huntingAction();
     void updateMapInfo() override;
     void drawLower(r::frontend::Renderer& renderer, r::ivec2 offset) override;
     void draw(r::frontend::Renderer& renderer, r::ivec2 position) override;
@@ -43,6 +44,8 @@ public:
     enum class AlertedState {
         MoveToTarget,
     } alerted_state = AlertedState::MoveToTarget;
+    int hunting_counter = 0;
+    int hunting_delay = 0;
     r::ivec2 target_position;
 
     struct PathNode {
@@ -52,4 +55,5 @@ public:
         bool operator==(const PathNode& p) const { return position == p.position && direction == p.direction; }
     };
     std::vector<PathNode> path;
+    std::optional<r::ivec2> shot_fired_at;
 };

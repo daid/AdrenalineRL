@@ -4,6 +4,7 @@
 #include "shipGenerator.h"
 #include "keyDoor.h"
 #include "r/fov.h"
+#include "r/line.h"
 #include "r/random.h"
 #include "r/direction.h"
 #include "r/astar.h"
@@ -46,6 +47,7 @@ Guard::Guard(r::ivec2 position, int base_area_nr) : Entity(position), base_area_
 
 void Guard::tick()
 {
+    shot_fired_at.reset();
     if (Player::instance) {
         r::VisitFOV(pos(), view_range, [this](auto p) {
             if (p.x < 0 || p.y < 0 || p.x >= map.size().x || p.y >= map.size().y) return false;
@@ -64,7 +66,7 @@ void Guard::tick()
     case BaseState::Normal: normalAction(); break;
     case BaseState::Alerted: alertedAction(); break;
     case BaseState::Searching: break;
-    case BaseState::Hunting: break;
+    case BaseState::Hunting: huntingAction(); break;
     }
 
     //view_direction += M_PI * .125;
@@ -103,6 +105,36 @@ void Guard::alertedAction()
     }
 }
 
+void Guard::huntingAction()
+{
+    if (hunting_counter++ > 10) {
+        base_state = BaseState::Searching;
+        return;
+    }
+    if (hunting_delay) {
+        hunting_delay--;
+        return;
+    }
+    if (Player::instance) {
+        target_position = Player::instance->pos();
+        bool can_hit = true;
+        if (std::abs(angleDiff(target_position - pos(), view_direction)) > M_PI * 0.26f)
+            can_hit = false;
+        for(auto p : r::TraceLine(pos(), target_position)) {
+            if (map[p].isSolid() && p != target_position && p != pos()) {
+                can_hit = false;
+                break;
+            }
+        }
+        if (can_hit) {
+            shot_fired_at = target_position;
+            hunting_delay = 1;
+        } else {
+            pathFindTo(target_position);
+        }
+    }
+}
+
 void Guard::seePlayer(bool far_away)
 {
     switch(base_state)
@@ -116,12 +148,15 @@ void Guard::seePlayer(bool far_away)
             target_position = Player::instance->pos();
             path.clear();
         } else {
+            hunting_counter = 0;
+            hunting_delay = 0;
             base_state = BaseState::Hunting;
             target_position = Player::instance->pos();
             path.clear();
         }
         break;
     case BaseState::Hunting:
+        hunting_counter = 0;
         break;
     }
 }
@@ -160,7 +195,9 @@ bool Guard::pathFindTo(r::ivec2 target)
     if (diff.y < 0) view_target = M_PI * 1.5;
     
     auto ad = angleDiff(view_direction, view_target);
-    if (std::abs(ad) < M_PI * 0.130) {
+    auto rotation_per_turn = M_PI * .125;
+    if (base_state == BaseState::Hunting) rotation_per_turn *= 2.0;
+    if (std::abs(ad) < rotation_per_turn + 0.005) {
         view_direction = view_target;
         if (!move(path[0].position)) {
             auto door = dynamic_cast<Door*>(map[path[0].position].entity);
@@ -168,16 +205,25 @@ bool Guard::pathFindTo(r::ivec2 target)
                 door->bump(this);
         }
     } else {
-        if (ad > 0) view_direction -= M_PI * .125;
-        else view_direction += M_PI * .125;
+        if (ad > 0) view_direction -= rotation_per_turn;
+        else view_direction += rotation_per_turn;
     }
     return true;
 }
 
 void Guard::drawLower(r::frontend::Renderer& renderer, r::ivec2 offset)
 {
-    for(auto p : path)
-        renderer.draw(p.position + offset, '+', {.5, .5, .5});
+    for(auto p : path) {
+        if (p.direction == r::Direction::Left || p.direction == r::Direction::Right)
+            renderer.draw(p.position + offset, '-', {.5, .5, .5});
+        else if (p.direction == r::Direction::Up || p.direction == r::Direction::Down)
+            renderer.draw(p.position + offset, '|', {.5, .5, .5});
+    }
+    if (shot_fired_at.has_value()) {
+        for(auto p : r::TraceLine(pos(), shot_fired_at.value())) {
+            renderer.draw(p + offset, '*', {.9, .0, .0});
+        }
+    }
 }
 
 void Guard::draw(r::frontend::Renderer& renderer, r::ivec2 position)

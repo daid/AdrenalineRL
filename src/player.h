@@ -10,5 +10,8 @@ public:
     void updateMapInfo() override;
     void draw(r::frontend::Renderer& renderer, r::ivec2 position);
 
+    static constexpr int max_health = 5;
+    int health = max_health;
+
     static Player* instance;
 };
