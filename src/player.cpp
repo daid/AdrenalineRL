@@ -1,5 +1,6 @@
 #include "player.h"
 #include "map.h"
+#include "item.h"
 #include "r/fov.h"
 
 
@@ -18,6 +19,30 @@ Player::~Player()
 void Player::draw(r::frontend::Renderer& renderer, r::ivec2 position)
 {
     renderer.draw(position, '@', {1, 1, 1});
+}
+
+bool Player::pickup(Item* item)
+{
+    if (item->type == Item::Type::Key) {
+        has_key.insert(item->subtype);
+        delete item;
+        return true;
+    }
+    for(size_t n=0; n<items.size(); n++) {
+        if (!items[n]) {
+            items[n] = item;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Player::dropItem(int index)
+{
+    if (!items[index]) return false;
+    map[pos()].items.push_back(items[index]);
+    items[index] = nullptr;
+    return true;
 }
 
 void Player::updateMapInfo()

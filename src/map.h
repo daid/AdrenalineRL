@@ -1,6 +1,8 @@
 #pragma once
 
 #include "r/vector2.h"
+#include <memory>
+
 
 class Entity;
 class Item;

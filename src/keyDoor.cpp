@@ -1,5 +1,6 @@
 #include "keyDoor.h"
 #include "map.h"
+#include "player.h"
 #include "r/direction.h"
 #include <stdio.h>
 
@@ -43,6 +44,7 @@ void Door::tick()
 
 bool Door::bump(Entity* bumper)
 {
+    (void)bumper;
     map[pos()].entity = nullptr;
     map[pos()].second_entity = this;
     open_counter = 5;
@@ -56,6 +58,15 @@ bool Door::bump(Entity* bumper)
 
 KeyDoor::KeyDoor(r::ivec2 position, int area_nr) : Door(position), area_nr(area_nr)
 {
+}
+
+bool KeyDoor::bump(Entity* bumper)
+{
+    if (bumper == Player::instance) {
+        if (Player::instance->has_key.find(area_nr) == Player::instance->has_key.end())
+            return false;
+    }
+    return Door::bump(bumper);
 }
 
 void KeyDoor::draw(r::frontend::Renderer& renderer, r::ivec2 position)

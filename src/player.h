@@ -1,7 +1,10 @@
 #pragma once
 
 #include "entity.h"
+#include <array>
+#include <unordered_set>
 
+class Item;
 class Player : public Entity
 {
 public:
@@ -10,8 +13,16 @@ public:
     void updateMapInfo() override;
     void draw(r::frontend::Renderer& renderer, r::ivec2 position);
 
+    bool pickup(Item* item);
+    bool dropItem(int index);
+
     static constexpr int max_health = 5;
     int health = max_health;
+    static constexpr int max_adrenaline = 5;
+    int adrenaline = max_adrenaline;
+
+    std::unordered_set<int> has_key;
+    std::array<Item*, 10> items{};
 
     static Player* instance;
 };

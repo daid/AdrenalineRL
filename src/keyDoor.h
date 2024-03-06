@@ -23,5 +23,7 @@ public:
     KeyDoor(r::ivec2 position, int area_nr);
     void draw(r::frontend::Renderer& renderer, r::ivec2 position);
 
+    bool bump(Entity*) override;
+    
     int area_nr;
 };

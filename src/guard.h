@@ -2,6 +2,7 @@
 
 #include "entity.h"
 #include "r/direction.h"
+#include <optional>
 
 /*
 Main state:
@@ -13,8 +14,8 @@ Main state:
 class Guard : public Entity
 {
 public:
-    static constexpr float view_range = 20;
-    static constexpr float short_range = 12;
+    static constexpr float view_range = 25;
+    static constexpr float short_range = 15;
     Guard(r::ivec2 position, int base_area_nr);
     void tick() override;
     void normalAction();
