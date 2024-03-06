@@ -23,6 +23,7 @@ public:
     virtual bool bump(Entity*) { return false; }
 
     virtual bool blocksVision() { return false; }
+    virtual bool blocksPathFind() { return true; }
 
     static std::vector<Entity*> all;
 private:

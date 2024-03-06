@@ -3,11 +3,13 @@
 #include "player.h"
 #include "shipGenerator.h"
 #include "keyDoor.h"
+#include "visualEffect.h"
 #include "r/fov.h"
 #include "r/line.h"
 #include "r/random.h"
 #include "r/direction.h"
 #include "r/astar.h"
+#include <stdio.h>
 
 
 static float angleDiff(float a1, float angle) {
@@ -47,7 +49,6 @@ Guard::Guard(r::ivec2 position, int base_area_nr) : Entity(position), base_area_
 
 void Guard::tick()
 {
-    shot_fired_at.reset();
     if (Player::instance) {
         r::VisitFOV(pos(), view_range, [this](auto p) {
             if (p.x < 0 || p.y < 0 || p.x >= map.size().x || p.y >= map.size().y) return false;
@@ -65,7 +66,7 @@ void Guard::tick()
     {
     case BaseState::Normal: normalAction(); break;
     case BaseState::Alerted: alertedAction(); break;
-    case BaseState::Searching: break;
+    case BaseState::Searching: searchingAction(); break;
     case BaseState::Hunting: huntingAction(); break;
     }
 
@@ -105,10 +106,42 @@ void Guard::alertedAction()
     }
 }
 
+void Guard::searchingAction()
+{
+    if (!pathFindTo(target_position)) {
+        if (search_count > 0) {
+            search_count--;
+            int bail_counter = 1000;
+            while(true) {
+                bail_counter--;
+                if (!bail_counter) {
+                    printf("Bailed search...\n");
+                    target_position = pos();
+                    path.clear();
+                    break;
+                }
+                target_position = search_start + r::ivec2{r::irandom(-8, 8), r::irandom(-8, 8)};
+                if (target_position.x < 0 || target_position.y < 0 || target_position.x >= map.size().x || target_position.y >= map.size().y)
+                    continue;
+                if (map[target_position].type == Tile::Type::Wall) continue;
+                if (map[target_position].type == Tile::Type::Void) continue;
+                if (!findPathTo(target_position)) continue;
+                if (path.size() > 30) continue;
+                break;
+            }
+        } else {
+            normal_state = NormalState::Idle;
+            base_state = BaseState::Normal;
+        }
+    }
+}
+
 void Guard::huntingAction()
 {
-    if (hunting_counter++ > 10) {
+    if (hunting_counter++ > 3) {
         base_state = BaseState::Searching;
+        search_count = 3;
+        search_start = target_position;
         return;
     }
     if (hunting_delay) {
@@ -127,7 +160,8 @@ void Guard::huntingAction()
             }
         }
         if (can_hit) {
-            shot_fired_at = target_position;
+            makeNoise(pos(), 15.5, target_position);
+            new LineEffect(pos(), target_position);
             hunting_delay = 1;
         } else {
             pathFindTo(target_position);
@@ -143,10 +177,7 @@ void Guard::seePlayer(bool far_away)
     case BaseState::Alerted:
     case BaseState::Searching:
         if (far_away) {
-            base_state = BaseState::Alerted;
-            alerted_state = AlertedState::MoveToTarget;
-            target_position = Player::instance->pos();
-            path.clear();
+            investigate(Player::instance->pos());
         } else {
             hunting_counter = 0;
             hunting_delay = 0;
@@ -168,7 +199,7 @@ namespace std { template <> struct hash<Guard::PathNode> {
   };
 }
 
-bool Guard::pathFindTo(r::ivec2 target)
+bool Guard::findPathTo(r::ivec2 target)
 {
     path = r::AStar<PathNode>({pos(), angleToDirection(view_direction)}, {target, static_cast<r::Direction>(5)}, [](PathNode p) {
         std::vector<std::pair<PathNode, float>> v;
@@ -187,6 +218,13 @@ bool Guard::pathFindTo(r::ivec2 target)
         path.clear();
         return false;
     }
+    return true;
+}
+
+bool Guard::pathFindTo(r::ivec2 target)
+{
+    if (!findPathTo(target))
+        return false;
     float view_target = 0;
     auto diff = path[0].position - pos();
     if (diff.x > 0) view_target = 0;
@@ -219,16 +257,19 @@ void Guard::drawLower(r::frontend::Renderer& renderer, r::ivec2 offset)
         else if (p.direction == r::Direction::Up || p.direction == r::Direction::Down)
             renderer.draw(p.position + offset, '|', {.5, .5, .5});
     }
-    if (shot_fired_at.has_value()) {
-        for(auto p : r::TraceLine(pos(), shot_fired_at.value())) {
-            renderer.draw(p + offset, '*', {.9, .0, .0});
-        }
-    }
 }
 
 void Guard::draw(r::frontend::Renderer& renderer, r::ivec2 position)
 {
     renderer.draw(position, 'G', {1, 1, 1});
+}
+
+void Guard::investigate(r::ivec2 position)
+{
+    base_state = BaseState::Alerted;
+    alerted_state = AlertedState::MoveToTarget;
+    target_position = position;
+    path.clear();
 }
 
 void Guard::updateMapInfo()
@@ -249,4 +290,18 @@ void Guard::updateMapInfo()
         }
         return !map[p].blocksVision();
     });
+}
+
+void Guard::makeNoise(r::ivec2 noise_position, float radius, r::ivec2 target_position)
+{
+    new NoiseEffect(noise_position, radius);
+    for(auto e : Entity::all) {
+        auto guard = dynamic_cast<Guard*>(e);
+        if (!guard) continue;
+        if (r::length(r::vec2(guard->pos() - noise_position)) <= radius) {
+            if (guard->base_state != BaseState::Hunting) {
+                guard->investigate(target_position);
+            }
+        }
+    }
 }

@@ -7,7 +7,8 @@ class Door : public Entity
 public:
     Door(r::ivec2 position);
     void draw(r::frontend::Renderer& renderer, r::ivec2 position);
-    bool blocksVision() { return true; }
+    bool blocksVision() override { return true; }
+    bool blocksPathFind() override { return false; }
 
     void tick() override;
     bool bump(Entity*) override;

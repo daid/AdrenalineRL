@@ -4,6 +4,7 @@
 #include "keyDoor.h"
 #include "player.h"
 #include "map.h"
+#include "item.h"
 #include "r/random.h"
 #include <stdio.h>
 
@@ -83,6 +84,14 @@ static bool addArea(r::ivec2 start, int area_nr)
 static void generateShipTileAreas(int area_count)
 {
     ship_tiles.resize({20, 20});
+    for(auto& tile : map) {
+        if (tile.entity && tile.entity != Player::instance)
+            delete tile.entity;
+        if (tile.second_entity)
+            delete tile.second_entity;
+        for(auto item : tile.items)
+            delete item;
+    }
     map.resize(ship_tiles.size() * 7 + r::ivec2{1, 1});
     area_info.clear();
     area_info.resize(area_count);
@@ -145,6 +154,8 @@ static void generateShipTileAreas(int area_count)
 
 void generateShip()
 {
+    int min_guard_per_area = 1;
+    int max_guard_per_area = 3;
     generateShipTileAreas(5);
 
     for(auto p : r::Recti({}, ship_tiles.size())) {
@@ -160,9 +171,12 @@ void generateShip()
 
     for(size_t area_nr=0; area_nr<area_info.size(); area_nr++) {
         auto& ai = area_info[area_nr];
-        auto p = ai.tiles[r::irandom(0, ai.tiles.size() - 1)];
-        auto target = p * 7 + r::ivec2{r::irandom(3, 4), r::irandom(3, 4)};
-        if (!map[target].entity)
-            new Guard(target, area_nr);
+        int guard_count = r::irandom(min_guard_per_area, max_guard_per_area);
+        for(int n=0; n<guard_count; n++) {
+            auto p = ai.tiles[r::irandom(0, ai.tiles.size() - 1)];
+            auto target = p * 7 + r::ivec2{r::irandom(3, 4), r::irandom(3, 4)};
+            if (!map[target].entity)
+                new Guard(target, area_nr);
+        }
     }
 }

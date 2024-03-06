@@ -12,6 +12,7 @@ public:
     virtual ~Player();
     void updateMapInfo() override;
     void draw(r::frontend::Renderer& renderer, r::ivec2 position);
+    bool blocksPathFind() override { return false; }
 
     bool pickup(Item* item);
     bool dropItem(int index);

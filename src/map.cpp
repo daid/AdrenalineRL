@@ -15,6 +15,7 @@ bool Tile::isWalkable()
 {
     if (type == Type::Wall) return false;
     if (type == Type::Void) return false;
+    if (entity && entity->blocksPathFind()) return false;
     return true;
 }
 

@@ -4,6 +4,7 @@
 #include "r/direction.h"
 #include <optional>
 
+class Item;
 /*
 Main state:
 * Normal (patrolling/idling)
@@ -20,12 +21,17 @@ public:
     void tick() override;
     void normalAction();
     void alertedAction();
+    void searchingAction();
     void huntingAction();
     void updateMapInfo() override;
+    void investigate(r::ivec2 position);
     void drawLower(r::frontend::Renderer& renderer, r::ivec2 offset) override;
     void draw(r::frontend::Renderer& renderer, r::ivec2 position) override;
+    bool findPathTo(r::ivec2 target);
     bool pathFindTo(r::ivec2 target);
     void seePlayer(bool far_away);
+
+    static void makeNoise(r::ivec2 noise_position, float radius, r::ivec2 target_position);
 
     int base_area_nr;
 
@@ -45,9 +51,11 @@ public:
     enum class AlertedState {
         MoveToTarget,
     } alerted_state = AlertedState::MoveToTarget;
+    int search_count = 0;
+    r::ivec2 search_start{};
     int hunting_counter = 0;
     int hunting_delay = 0;
-    r::ivec2 target_position;
+    r::ivec2 target_position{};
 
     struct PathNode {
         r::ivec2 position;
@@ -56,5 +64,5 @@ public:
         bool operator==(const PathNode& p) const { return position == p.position && direction == p.direction; }
     };
     std::vector<PathNode> path;
-    std::optional<r::ivec2> shot_fired_at;
+    Item* carry_item = nullptr;
 };

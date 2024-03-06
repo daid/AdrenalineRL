@@ -15,6 +15,7 @@
 #include "roomTemplate.h"
 #include "guard.h"
 #include "player.h"
+#include "visualEffect.h"
 #include "shipGenerator.h"
 
 static void printItem(r::frontend::Renderer& renderer, r::ivec2 position, Item* item) {
@@ -24,9 +25,11 @@ static void printItem(r::frontend::Renderer& renderer, r::ivec2 position, Item* 
 }
 
 void tick() {
-    for(auto e : Entity::all) {
+    for(auto ve : VisualEffect::all)
+        delete ve;
+    VisualEffect::all.clear();
+    for(auto e : Entity::all)
         e->tick();
-    }
 }
 
 
@@ -118,9 +121,10 @@ public:
             if (!map[p].items.empty())
                 map[p].items.back()->draw(renderer, p + camera_offset);
         }
-        for(auto e : Entity::all) {
+        for(auto e : Entity::all)
             e->drawLower(renderer, camera_offset);
-        }
+        for(auto ve : VisualEffect::all)
+            ve->draw(renderer, camera_offset);
         for(auto p : r::Recti{{}, map.size()}) {
             if (map[p].entity)
                 map[p].entity->draw(renderer, p + camera_offset);
@@ -218,8 +222,6 @@ int main(int argc, char** argv) {
 
     generateShip();
 
-    //new Guard({15, 15});
-    //new Guard({5, 5});
     new Player({4, 4 + 7 * 10});
     Player::instance->pickup(new Item());
     Player::instance->items[9] = new Item();
