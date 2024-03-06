@@ -18,10 +18,10 @@ Door::Door(r::ivec2 position) : Entity(position)
 
 void Door::draw(r::frontend::Renderer& renderer, r::ivec2 position)
 {
+    r::Color color = {0.3, 0.8, 0.0};
     if (open_counter)
-        renderer.draw(position, '#', {0.5, 0.15, 0});
-    else
-        renderer.draw(position, '#', {1, 0.3, 0});
+        color *= .5;
+    renderer.draw(position, '#', color);
 }
 
 void Door::tick()
@@ -71,8 +71,10 @@ bool KeyDoor::bump(Entity* bumper)
 
 void KeyDoor::draw(r::frontend::Renderer& renderer, r::ivec2 position)
 {
+    r::Color color = {1, 0.3, 0};
+    if (Player::instance && Player::instance->has_key.find(area_nr) != Player::instance->has_key.end())
+        color = {0.3, 0.8, 0};
     if (open_counter)
-        renderer.draw(position, '0' + area_nr, {0.5, 0.15, 0});
-    else
-        renderer.draw(position, '0' + area_nr, {1, 0.3, 0});
+        color *= .5;
+    renderer.draw(position, '0' + area_nr, color);
 }

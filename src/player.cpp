@@ -45,6 +45,13 @@ bool Player::dropItem(int index)
     return true;
 }
 
+bool Player::equip(int index, int to_index)
+{
+    if (!items[index]) return false;
+    std::swap(items[index], items[to_index]);
+    return true;
+}
+
 void Player::updateMapInfo()
 {
     r::VisitFOV(pos(), 20, [this](auto p) {

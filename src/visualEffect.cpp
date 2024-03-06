@@ -27,9 +27,28 @@ void LineEffect::draw(r::frontend::Renderer& renderer, r::ivec2 offset)
 
 void NoiseEffect::draw(r::frontend::Renderer& renderer, r::ivec2 offset)
 {
-    for(int y=-radius; y<=radius; y++) {
-        int sx = std::sqrt(radius*radius - y*y);
-        renderer.draw(position + offset + r::ivec2{-sx, y}, {.2, .2, .2});
-        renderer.draw(position + offset + r::ivec2{sx, y}, {.2, .2, .2});
-    }
+    auto f = [&](int x, int y) {
+        renderer.draw(position + offset + r::ivec2{ x, y}, {.2, .2, .2});
+        renderer.draw(position + offset + r::ivec2{-x, y}, {.2, .2, .2});
+        renderer.draw(position + offset + r::ivec2{ x,-y}, {.2, .2, .2});
+        renderer.draw(position + offset + r::ivec2{-x,-y}, {.2, .2, .2});
+        renderer.draw(position + offset + r::ivec2{ y, x}, {.2, .2, .2});
+        renderer.draw(position + offset + r::ivec2{-y, x}, {.2, .2, .2});
+        renderer.draw(position + offset + r::ivec2{ y,-x}, {.2, .2, .2});
+        renderer.draw(position + offset + r::ivec2{-y,-x}, {.2, .2, .2});
+    };
+
+    int x = 0, y = radius;
+    int d = 3 - 2 * radius; 
+    f(x, y); 
+    while (y >= x) {
+        x++; 
+        if (d > 0) { 
+            y--;  
+            d = d + 4 * (x - y) + 10;
+        } else {
+            d = d + 4 * x + 6; 
+        }
+        f(x, y); 
+    } 
 }

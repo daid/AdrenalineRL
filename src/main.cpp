@@ -66,6 +66,72 @@ class DropItemMenu : public r::GameState
     int selection_index = 0;
 };
 
+class EquipItemMenu : public r::GameState
+{
+    void onRender(r::frontend::Renderer& renderer) override {
+        switch(state)
+        {
+        case State::SelectItem:{
+            auto size = r::ivec2{24, Player::instance->items.size() + 1};
+            auto tl = (renderer.size() - size) / 2;
+            renderer.drawBox(r::Recti{tl, size}, {1, 1, 1}, {0, 0, 0});
+            renderer.print(tl + r::ivec2{2, 1}, {1, 1, 1}, "Equip which item:");
+            renderer.draw(r::Recti{tl + r::ivec2{2, 2 + selection_index}, {size.x - 4, 1}}, ' ', {1, 1, 1}, {.2, .2, .7});
+            for(size_t n=0; n<Player::instance->items.size()-2; n++) {
+                printItem(renderer, tl + r::ivec2{3, 2 + n}, Player::instance->items[n+2]);
+            }
+            }break;
+        case State::SelectSlot:{
+            auto size = r::ivec2{24, 5};
+            auto tl = (renderer.size() - size) / 2;
+            renderer.drawBox(r::Recti{tl, size}, {1, 1, 1}, {0, 0, 0});
+            renderer.print(tl + r::ivec2{2, 1}, {1, 1, 1}, "In which slot:");
+            renderer.draw(r::Recti{tl + r::ivec2{2, 2 + slot_index}, {size.x - 4, 1}}, ' ', {1, 1, 1}, {.2, .2, .7});
+            for(size_t n=0; n<2; n++) {
+                printItem(renderer, tl + r::ivec2{3, 2 + n}, Player::instance->items[n]);
+            }
+            }break;
+        }
+    }
+
+    void onKey(int key) override {
+        switch(key) {
+        case r::KEY_ESCAPE: engine.popState(); break;
+        case r::KEY_UP: switch(state) {
+            case State::SelectItem: selection_index = (selection_index + Player::instance->items.size() - 2 - 1) % (Player::instance->items.size() - 2); break;
+            case State::SelectSlot: slot_index ^= 1; break;
+            }
+            break;
+        case r::KEY_DOWN: switch(state) {
+            case State::SelectItem: selection_index = (selection_index + 1) % (Player::instance->items.size() - 2); break;
+            case State::SelectSlot: slot_index ^= 1; break;
+            }
+            break;
+        case r::KEY_RETURN:
+            switch(state)
+            {
+            case State::SelectItem:
+                state = State::SelectSlot;
+                if (!Player::instance->items[selection_index + 2])
+                    engine.popState();
+                break;
+            case State::SelectSlot:
+                if (Player::instance->equip(selection_index + 2, slot_index)) {
+                    tick();
+                }
+                engine.popState();
+                break;
+            }
+            break;
+        }
+    }
+
+    enum class State {
+        SelectItem, SelectSlot,
+    } state = State::SelectItem;
+    int selection_index = 0;
+    int slot_index = 0;
+};
 
 class MainState : public r::GameState
 {
@@ -186,6 +252,9 @@ public:
         case r::KEY_DOWN: tryPlayerMove(r::ivec2{0, 1}); break;
         case 'g': case 'p': tryPickup(); break;
         case 'd': engine.pushState<DropItemMenu>(); break;
+        case 'e': engine.pushState<EquipItemMenu>(); break;
+        case '1': tryUseItem(0); break;
+        case '2': tryUseItem(1); break;
         case ' ': tick(); break;
         }
     }
@@ -208,6 +277,10 @@ public:
         if (!Player::instance->pickup(tile.items[0])) return;
         tile.items.erase(tile.items.begin());
         tick();
+    }
+
+    void tryUseItem(int index) {
+
     }
 
     void onMouseDown(r::ivec2 p, int button) {
