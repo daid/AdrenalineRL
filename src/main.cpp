@@ -18,6 +18,8 @@
 #include "visualEffect.h"
 #include "shipGenerator.h"
 
+static constexpr int sidebar_width = 15;
+
 static void printItem(r::frontend::Renderer& renderer, r::ivec2 position, Item* item) {
     if (!item) return;
     item->draw(renderer, position);
@@ -34,7 +36,7 @@ void tick() {
 
 
 r::ActionQueue<int> queue;
-r::Engine engine({.minimal_screen_size{60, 30}});
+r::Engine engine({.minimal_screen_size{60, 30}, .continuous_loop=false});
 
 class DropItemMenu : public r::GameState
 {
@@ -54,6 +56,7 @@ class DropItemMenu : public r::GameState
         case r::KEY_ESCAPE: engine.popState(); break;
         case r::KEY_UP: selection_index = (selection_index + Player::instance->items.size() - 1) % Player::instance->items.size(); break;
         case r::KEY_DOWN: selection_index = (selection_index + 1) % Player::instance->items.size(); break;
+        case ' ':
         case r::KEY_RETURN:
             if (Player::instance->dropItem(selection_index)) {
                 tick();
@@ -107,6 +110,7 @@ class EquipItemMenu : public r::GameState
             case State::SelectSlot: slot_index ^= 1; break;
             }
             break;
+        case ' ':
         case r::KEY_RETURN:
             switch(state)
             {
@@ -133,11 +137,75 @@ class EquipItemMenu : public r::GameState
     int slot_index = 0;
 };
 
+class PickTarget : public r::GameState
+{
+public:
+    PickTarget() {
+        target_position = Player::instance->pos();
+        r::VisitFOV(Player::instance->pos(), 20, [this](auto p) {
+            if (p.x < 0 || p.y < 0 || p.x >= map.size().x || p.y >= map.size().y) return false;
+            if (map[p].entity) {
+                auto guard = dynamic_cast<Guard*>(map[p].entity);
+                if (guard)
+                    possible_targets.push_back(guard);
+            }
+            return !map[p].blocksVision();
+        });
+        std::sort(possible_targets.begin(), possible_targets.end(), [](const Entity* a, const Entity* b) {
+            return r::length(r::vec2(Player::instance->pos() - a->pos())) < r::length(r::vec2(Player::instance->pos() - b->pos()));
+        });
+        if (!possible_targets.empty())
+            target_position = possible_targets.front()->pos();
+        for(auto e : possible_targets)
+            if (e->id() == last_target_id)
+                target_position = e->pos();
+    }
+
+    void onRender(r::frontend::Renderer& renderer) override {
+        auto camera_offset = renderer.size() / 2 - Player::instance->pos();
+        camera_offset.x -= sidebar_width / 2;
+
+        for(auto p : r::TraceLine(Player::instance->pos(), target_position)) {
+            renderer.draw(p + camera_offset, {.3, .3, .0});
+        }
+        renderer.draw(target_position + camera_offset, 'X', {1, 1, .0});
+    }
+
+    void onKey(int key) override {
+        switch(key) {
+        case r::KEY_ESCAPE: engine.popState(); break;
+        case r::KEY_LEFT: target_position.x -= 1; break;
+        case r::KEY_RIGHT: target_position.x += 1; break;
+        case r::KEY_UP: target_position.y -= 1; break;
+        case r::KEY_DOWN: target_position.y += 1; break;
+        case '\t':{
+            int current_index = -1;
+            for(size_t n=0; n<possible_targets.size(); n++) {
+                if (possible_targets[n]->pos() == target_position)
+                    current_index = n;
+            }
+            if (!possible_targets.empty())
+                target_position = possible_targets[(current_index+1)%possible_targets.size()]->pos();
+            }break;
+        case ' ':
+        case r::KEY_RETURN:
+            last_target_id = 0;
+            for(auto e : possible_targets)
+                if (e->pos() == target_position)
+                    last_target_id = e->id();
+            engine.popState();
+            break;
+        }
+    }
+
+    std::vector<Entity*> possible_targets;
+    r::ivec2 target_position;
+    static inline size_t last_target_id;
+};
+
 class MainState : public r::GameState
 {
 public:
-    static constexpr int sidebar_width = 15;
-
     MainState() {
     }
 
@@ -280,7 +348,8 @@ public:
     }
 
     void tryUseItem(int index) {
-
+        if (!Player::instance->items[index]) return;
+        engine.pushState<PickTarget>();
     }
 
     void onMouseDown(r::ivec2 p, int button) {

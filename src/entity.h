@@ -13,7 +13,8 @@ public:
     Entity(Entity&) = delete;
     Entity& operator=(Entity&) = delete;
 
-    r::ivec2 pos() { return position; }
+    r::ivec2 pos() const { return position; }
+    size_t id() const { return _id; }
     bool move(r::ivec2 target);
 
     virtual void drawLower(r::frontend::Renderer& renderer, r::ivec2 offset) { (void)renderer; (void)offset; }
@@ -27,5 +28,6 @@ public:
 
     static std::vector<Entity*> all;
 private:
+    size_t _id;
     r::ivec2 position;
 };

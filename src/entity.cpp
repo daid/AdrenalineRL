@@ -3,7 +3,7 @@
 
 
 std::vector<Entity*> Entity::all;
-
+static size_t next_id = 1;
 
 Entity::Entity(r::ivec2 _position)
 : position(_position)
@@ -11,6 +11,7 @@ Entity::Entity(r::ivec2 _position)
     assert(position.x >= 0 && position.y >= 0 && position.x < map.size().x && position.y < map.size().y);
     map[position].entity = this;
     all.push_back(this);
+    _id = next_id++;
 }
 
 Entity::~Entity()
