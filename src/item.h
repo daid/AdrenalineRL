@@ -4,6 +4,7 @@
 #include "r/frontend/renderer.h"
 
 
+class Entity;
 class Item
 {
 public:
@@ -16,4 +17,7 @@ public:
 
     std::string name();
     void draw(r::frontend::Renderer& renderer, r::ivec2 position);
+
+    int range();
+    bool fire(Entity* from, r::ivec2 target);
 };

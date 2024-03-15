@@ -140,9 +140,9 @@ class EquipItemMenu : public r::GameState
 class PickTarget : public r::GameState
 {
 public:
-    PickTarget() {
+    PickTarget(int max_range, std::function<void(r::ivec2)> callback): max_range(max_range), callback(callback) {
         target_position = Player::instance->pos();
-        r::VisitFOV(Player::instance->pos(), 20, [this](auto p) {
+        r::VisitFOV(Player::instance->pos(), max_range, [this](auto p) {
             if (p.x < 0 || p.y < 0 || p.x >= map.size().x || p.y >= map.size().y) return false;
             if (map[p].entity) {
                 auto guard = dynamic_cast<Guard*>(map[p].entity);
@@ -165,10 +165,21 @@ public:
         auto camera_offset = renderer.size() / 2 - Player::instance->pos();
         camera_offset.x -= sidebar_width / 2;
 
+        r::ivec2 final_point = Player::instance->pos();
         for(auto p : r::TraceLine(Player::instance->pos(), target_position)) {
-            renderer.draw(p + camera_offset, {.3, .3, .0});
+            if (r::length(r::vec2(p - Player::instance->pos())) > max_range)
+                break;
+            if (p.x < 0 || p.y < 0 || p.x >= map.size().x || p.y >= map.size().y)
+                break;
+            renderer.draw(p + camera_offset, {.5, .3, .0});
+            final_point = p;
+            if (map[p].blocksVision())
+                break;
         }
-        renderer.draw(target_position + camera_offset, 'X', {1, 1, .0});
+        if (final_point != target_position)
+            renderer.draw(target_position + camera_offset, 'X', {1, .0, .0});
+        else
+            renderer.draw(target_position + camera_offset, 'X', {1, .7, .0});
     }
 
     void onKey(int key) override {
@@ -188,16 +199,20 @@ public:
                 target_position = possible_targets[(current_index+1)%possible_targets.size()]->pos();
             }break;
         case ' ':
+        case 'f':
         case r::KEY_RETURN:
             last_target_id = 0;
             for(auto e : possible_targets)
                 if (e->pos() == target_position)
                     last_target_id = e->id();
+            callback(target_position);
             engine.popState();
             break;
         }
     }
 
+    int max_range;
+    std::function<void(r::ivec2)> callback;
     std::vector<Entity*> possible_targets;
     r::ivec2 target_position;
     static inline size_t last_target_id;
@@ -321,8 +336,10 @@ public:
         case 'g': case 'p': tryPickup(); break;
         case 'd': engine.pushState<DropItemMenu>(); break;
         case 'e': engine.pushState<EquipItemMenu>(); break;
+        case 'f':
         case '1': tryUseItem(0); break;
         case '2': tryUseItem(1); break;
+        case 'x': Player::instance->swapEquipment(); break;
         case ' ': tick(); break;
         }
     }
@@ -349,7 +366,17 @@ public:
 
     void tryUseItem(int index) {
         if (!Player::instance->items[index]) return;
-        engine.pushState<PickTarget>();
+        switch(Player::instance->items[index]->type)
+        {
+        case Item::Type::RangedWeapon:
+            engine.pushState<PickTarget>(Player::instance->items[index]->range(), [index](r::ivec2 pos) {
+                Player::instance->items[index]->fire(Player::instance, pos);
+            });
+            break;
+        case Item::Type::MeleeWeapon:
+        case Item::Type::Key:
+            break;
+        }
     }
 
     void onMouseDown(r::ivec2 p, int button) {

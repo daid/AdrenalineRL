@@ -52,6 +52,11 @@ bool Player::equip(int index, int to_index)
     return true;
 }
 
+void Player::swapEquipment()
+{
+    if (items[0] && items[1]) std::swap(items[0], items[1]);
+}
+
 void Player::updateMapInfo()
 {
     r::VisitFOV(pos(), 20, [this](auto p) {

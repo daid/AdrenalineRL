@@ -17,6 +17,7 @@ public:
     bool pickup(Item* item);
     bool dropItem(int index);
     bool equip(int index, int to_index);
+    void swapEquipment();
 
     static constexpr int max_health = 5;
     int health = max_health;
